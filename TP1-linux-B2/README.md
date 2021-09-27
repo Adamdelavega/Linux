@@ -466,7 +466,7 @@ Last login: Mon Sep 27 02:16:49 2021
 
 **Uniquement sur `node1.tp1.b2`.**
 
-🌞 Utilisez LVM pour :
+Utilisez LVM pour :
 
 - agréger les deux disques en un seul *volume group*
 ```
