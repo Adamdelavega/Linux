@@ -469,8 +469,306 @@ Last login: Mon Sep 27 02:16:49 2021
 🌞 Utilisez LVM pour :
 
 - agréger les deux disques en un seul *volume group*
+```
+[adam@node1 ~]$ sudo vgextend adam /dev/sdc
+  Volume group "adam" successfully extended
+
+[adam@node1 ~]$ sudo vgextend adam /dev/sdb
+  Volume group "adam" successfully extended
+```
+```
+[adam@node1 ~]$ sudo pvs
+  PV         VG                Fmt  Attr PSize   PFree 
+  /dev/sda2  rl_bastion-ovh1fr lvm2 a--  <15.00g     0 
+  /dev/sdb   adam              lvm2 a--   <3.00g <3.00g
+  /dev/sdc   adam              lvm2 a--   <3.00g <3.00g
+
+[adam@node1 ~]$ sudo vgs
+  VG                #PV #LV #SN Attr   VSize   VFree
+  adam                2   0   0 wz--n-   5.99g 5.99g
+  rl_bastion-ovh1fr   1   2   0 wz--n- <15.00g    0 
+```
 - créer 3 *logical volumes* de 1 Go chacun
+```
+[adam@node1 ~]$ sudo lvcreate -L 1G adam -n data1
+  Logical volume "data1" created.
+
+[adam@node1 ~]$ sudo lvcreate -L 1G adam -n data2
+  Logical volume "data2" created.
+
+[adam@node1 ~]$ sudo lvcreate -L 1G adam -n data3
+  Logical volume "data3" created.
+```
+```
+[adam@node1 ~]$ sudo lvs
+  LV    VG                Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  data1 adam              -wi-a-----  1.00g                                                    
+  data2 adam              -wi-a-----  1.00g                                                    
+  data3 adam              -wi-a-----  1.00g                                                    
+  root  rl_bastion-ovh1fr -wi-ao---- 13.39g                                                    
+  swap  rl_bastion-ovh1fr -wi-ao----  1.60g                                    
+```
 - formater ces partitions en `ext4`
+```
+[adam@node1 ~]$ sudo mkfs -t ext4 /dev/adam/data1
+mke2fs 1.45.6 (20-Mar-2020)
+Creating filesystem with 262144 4k blocks and 65536 inodes
+Filesystem UUID: c7bf0a84-2f73-4f93-bd92-1bb6513169ba
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (8192 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+[adam@node1 ~]$ sudo mkfs -t ext4 /dev/adam/data2
+mke2fs 1.45.6 (20-Mar-2020)
+Creating filesystem with 262144 4k blocks and 65536 inodes
+Filesystem UUID: ddc12638-96c5-4a14-8e1a-10f784f96cc3
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (8192 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+[adam@node1 ~]$ sudo mkfs -t ext4 /dev/adam/data3
+mke2fs 1.45.6 (20-Mar-2020)
+Creating filesystem with 262144 4k blocks and 65536 inodes
+Filesystem UUID: 0836a0fc-b15d-4631-8111-58cbe48d8b4f
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (8192 blocks): done
+Writing superblocks and filesystem accounting information: done
+```
 - monter ces partitions pour qu'elles soient accessibles aux points de montage `/mnt/part1`, `/mnt/part2` et `/mnt/part3`.
+```
+[adam@node1 ~]$ sudo mount /dev/adam/data1 /mnt/
+[adam@node1 ~]$ 
+
+[adam@node1 ~]$ sudo mount /dev/adam/data2 /mnt/
+[adam@node1 ~]$ 
+
+[adam@node1 ~]$ sudo mount /dev/adam/data3 /mnt/
+[adam@node1 ~]$ 
+```
+```
+[adam@node1 ~]$ mount
+sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime,seclabel)
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+devtmpfs on /dev type devtmpfs (rw,nosuid,seclabel,size=910324k,nr_inodes=227581,mode=755)
+[...]
+/dev/mapper/adam-data1 on /mnt type ext4 (rw,relatime,seclabel)
+/dev/mapper/adam-data2 on /mnt type ext4 (rw,relatime,seclabel)
+/dev/mapper/adam-data3 on /mnt type ext4 (rw,relatime,seclabel)
+```
+Grâce au fichier `/etc/fstab`, faites en sorte que cette partition soit montée automatiquement au démarrage du système.
+```
+[adam@node1 ~]$ sudo cat /etc/fstab
+
+#
+# /etc/fstab
+# Created by anaconda on Wed Sep 15 13:33:40 2021
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk/'.
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info.
+#
+# After editing this file, run 'systemctl daemon-reload' to update systemd
+# units generated from this file.
+#
+/dev/mapper/rl_bastion--ovh1fr-root /                       xfs     defaults        0 0
+UUID=386dd067-80e5-4f1c-8a2a-116c972b093e /boot                   xfs     defaults        0 0
+/dev/mapper/rl_bastion--ovh1fr-swap none                    swap    defaults        0 0
+/dev/adam/data1 /mnt ext4 defaults 0 0
+/dev/adam/data3	/mnt ext4 defaults 0 0
+/dev/adam/data2	/mnt ext4 defaults 0 0
+```
 
 ## III. Gestion de services
+## 1. Interaction avec un service existant
+
+**Uniquement sur `node1.tp1.b2`.**
+
+ Assurez-vous que :
+
+- l'unité est démarrée
+```
+[adam@node1 ~]$ sudo systemctl status firewalld
+● firewalld.service - firewalld - dynamic firewall daemon
+   Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor >
+   Active: active (running) since Mon 2021-09-27 01:59:23 CEST; 1h 4min ago
+     Docs: man:firewalld(1)
+ Main PID: 884 (firewalld)
+    Tasks: 2 (limit: 11378)
+   Memory: 30.5M
+   CGroup: /system.slice/firewalld.service
+           └─884 /usr/libexec/platform-python -s /usr/sbin/firewalld --nofork >
+
+Sep 27 01:59:22 node1.tp1.b2 systemd[1]: Starting firewalld - dynamic firewall>
+Sep 27 01:59:23 node1.tp1.b2 systemd[1]: Started firewalld - dynamic firewall >
+Sep 27 01:59:23 node1.tp1.b2 firewalld[884]: WARNING: AllowZoneDrifting is ena>
+lines 1-13/13 (END)
+```
+- l'unitée est activée (elle se lance automatiquement au démarrage)
+```
+Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor >
+```
+
+## 2. Création de service
+
+**Uniquement sur `node1.tp1.b2`.**
+
+### A. Unité simpliste
+
+Créer un fichier qui définit une unité de service `web.service` dans le répertoire `/etc/systemd/system`.
+```
+[adam@node1 system]$ sudo touch web.service
+[adam@node1 system]$ pwd
+/etc/systemd/system
+[adam@node1 system]$ ls
+basic.target.wants                          network-online.target.wants
+dbus-org.fedoraproject.FirewallD1.service   remote-fs.target.wants
+dbus-org.freedesktop.nm-dispatcher.service  sockets.target.wants
+dbus-org.freedesktop.timedate1.service      sysinit.target.wants
+default.target                              syslog.service
+default.target.wants                        systemd-timedated.service
+getty.target.wants                          timers.target.wants
+graphical.target.wants                      web.service
+multi-user.target.wants
+```
+
+Déposer le contenu suivant :
+```
+[adam@node1 system]$ cat web.service 
+[Unit]
+Description=Very simple web service
+
+[Service]
+ExecStart=/bin/python3 -m http.server 8888
+
+[Install]
+WantedBy=multi-user.target
+```
+**N'oubliez pas d'[ouvrir ce port](../../cours/memo/rocky_network.md#interagir-avec-le-firewall).**
+```
+[adam@node1 system]$ sudo firewall-cmd --add-port=8888/tcp --permanent
+success
+
+[adam@node1 ~]$ sudo firewall-cmd --add-port=8888/udp --permanent
+success
+```
+Une fois l'unité de service créée, il faut demander à *systemd* de relire les fichiers de configuration :
+```
+[adam@node1 system]$ sudo systemctl daemon-reload
+[adam@node1 system]$ 
+
+[adam@node1 system]$ sudo systemctl status web
+● web.service - Very simple web service
+   Loaded: loaded (/etc/systemd/system/web.service; disabled; vendor preset: d>
+   Active: inactive (dead)
+
+[adam@node1 system]$ sudo systemctl start web
+[adam@node1 system]$ 
+
+[adam@node1 system]$ sudo systemctl enable web
+Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc/systemd/system/web.service.
+```
+[adam@node1 ~]$ sudo systemctl status web
+● web.service - Very simple web service
+   Loaded: loaded (/etc/systemd/system/web.service; enabled; vendor preset:>
+   Active: active (running) since Mon 2021-09-27 03:52:26 CEST; 8s ago
+ Main PID: 30157 (python3)
+    Tasks: 1 (limit: 11378)
+   Memory: 9.8M
+   CGroup: /system.slice/web.service
+           └─30157 /bin/python3 -m http.server 8888
+
+Sep 27 03:52:26 node1.tp1.b2 systemd[1]: Started Very simple web service.
+```
+Une fois le service démarré, assurez-vous que pouvez accéder au serveur web : avec un navigateur ou la commande `curl` sur l'IP de la VM, port 8888.
+```
+[adam@node1 ~]$ curl 10.101.1.11:8888
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Directory listing for /</title>
+</head>
+<body>
+<h1>Directory listing for /</h1>
+<hr>
+<ul>
+<li><a href="bin/">bin@</a></li>
+<li><a href="boot/">boot/</a></li>
+<li><a href="dev/">dev/</a></li>
+<li><a href="etc/">etc/</a></li>
+<li><a href="home/">home/</a></li>
+<li><a href="lib/">lib@</a></li>
+<li><a href="lib64/">lib64@</a></li>
+<li><a href="media/">media/</a></li>
+<li><a href="mnt/">mnt/</a></li>
+<li><a href="opt/">opt/</a></li>
+<li><a href="proc/">proc/</a></li>
+<li><a href="root/">root/</a></li>
+<li><a href="run/">run/</a></li>
+<li><a href="sbin/">sbin@</a></li>
+<li><a href="srv/">srv/</a></li>
+<li><a href="sys/">sys/</a></li>
+<li><a href="tmp/">tmp/</a></li>
+<li><a href="usr/">usr/</a></li>
+<li><a href="var/">var/</a></li>
+</ul>
+<hr>
+</body>
+</html>
+```
+
+### B. Modification de l'unité
+
+ Créer un utilisateur `web`.
+```
+[adam@node1 ~]$ sudo useradd web
+[adam@node1 ~]$ sudo passwd web
+Changing password for user web.
+New password: 
+BAD PASSWORD: The password is shorter than 8 characters
+Retype new password: 
+passwd: all authentication tokens updated successfully.
+```
+Modifiez l'unité de service `web.service` créée précédemment en ajoutant les clauses :
+
+- `User=` afin de lancer le serveur avec l'utilisateur `web` dédié
+- `WorkingDirectory=` afin de lancer le serveur depuis un dossier spécifique, choisissez un dossier que vous avez créé dans `/srv`
+- ces deux clauses sont à positionner dans la section `[Service]` de votre unité
+```
+[adam@node1 ~]$ sudo cat /etc/systemd/system/web.service
+#!/usr/bin/python3
+[Unit]
+Description=Very simple web service
+
+[Service]
+ExecStart=/bin/python3 -m http.server 8888
+User=web
+WorkingDirectory=/srv/work
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Placer un fichier de votre choix dans le dossier créé dans `/srv` et tester que vous pouvez y accéder une fois le service actif. Il faudra que le dossier et le fichier qu'il contient appartiennent à l'utilisateur `web`.
+```
+[adam@node1 work]$ ls -l
+total 8
+-rw-r--r--. 1 root root 5 Sep 27 04:03 userAdam.txt
+-rw-r--r--. 1 web  root 4 Sep 27 04:06 userWeb.txt
+```
+Vérifier le bon fonctionnement avec une commande `curl`
+```
+[adam@node1 work]$ curl http://localhost:8888/srv/work/userWeb.txt
+Web
+```
