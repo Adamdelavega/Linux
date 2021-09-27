@@ -409,22 +409,55 @@ drwxr-xr-x. 5 root root  50 Sep 26 22:20 ..
 ### 2. SSH
 
 - il faut générer une clé sur le poste client de l'administrateur qui se connectera à distance (vous :) )
-- génération de clé depuis VOTRE poste donc
-
-
+```
+# Je sais que je peux créer des clé ssh avec cette commande mais j'ai préférer garder la clé que j'avais déjà
+ssh-keygen -t rsa
+```
+```
+adam@X1-Carbon:~/.ssh$ sudo cat id_rsa.pub
+[sudo] password for adam: 
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDStntmQPnQEyP3EYPTBH6lg8LZ6OBkyWKBCPtorVk+chdnnjtLEQ/xGsEbN331O5dqNToHv0t1JoOS3gSJbfGDoZ2ECq0gIe1kDy2eoUqiQ/+FElBzS66xI0WtOkpkgq8bT88rIzN1c8HQDfOCGjJvee+jcQFxXpghNSsNkUA0jcozPjlsGZZGxMTtDcDw1zIS68R7Vp5rwiM7XiZ5PvqT+vT45mIDePkcMRJu2Cq2rQ9VyKCE5UXmbh3YJyaLOHwrBsRedXlVCsACSmY9EhwmYRt0yhLIoQv6D9N1Sbm7tvIE+t2wsoClLXcsvaOTjMQCnnEO3r9RCvPdrtb1vOKD adam@X1-Carbon
+```
 - déposer la clé dans le fichier `/home/<USER>/.ssh/authorized_keys` de la machine que l'on souhaite administrer
   - vous utiliserez l'utilisateur que vous avez créé dans la partie précédente du TP
   - on peut le faire à la main
   - ou avec la commande `ssh-copy-id`
-**clé ssh**
 ```
-adam@X1-Carbon:~/.ssh$ cat id_rsa.pub 
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDStntmQPnQEyP3EYPTBH6lg8LZ6OBkyWKBCPtorVk+chdnnjtLEQ/xGsEbN331O5dqNToHv0t1JoOS3gSJbfGDoZ2ECq0gIe1kDy2eoUqiQ/+FElBzS66xI0WtOkpkgq8bT88rIzN1c8HQDfOCGjJvee+jcQFxXpghNSsNkUA0jcozPjlsGZZGxMTtDcDw1zIS68R7Vp5rwiM7XiZ5PvqT+vT45mIDePkcMRJu2Cq2rQ9VyKCE5UXmbh3YJyaLOHwrBsRedXlVCsACSmY9EhwmYRt0yhLIoQv6D9N1Sbm7tvIE+t2wsoClLXcsvaOTjMQCnnEO3r9RCvPdrtb1vOKD adam@X1-Carbon
-```
-```
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDStntmQPnQEyP3EYPTBH6lg8LZ6OBkyWKBCPtorVk+chdnnjtLEQ/xGsEbN331O5dqNToHv0t1JoOS3gSJbfGDoZ2ECq0gIe1kDy2eoUqiQ/+FElBzS66xI0WtOkpkgq8bT88rIzN1c8HQDfOCGjJvee+jcQFxXpghNSsNkUA0jcozPjlsGZZGxMTtDcDw1zIS68R7Vp5rwiM7XiZ5PvqT+vT45mIDePkcMRJu2Cq2rQ9VyKCE5UXmbh3YJyaLOHwrBsRedXlVCsACSmY9EhwmYRt0yhLIoQv6D9N1Sbm7tvIE+t2wsoClLXcsvaOTjMQCnnEO3r9RCvPdrtb1vOKD adam@X1-Carbon
-```
+adam@X1-Carbon:~/.ssh$ ssh-copy-id admin@10.101.1.11
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+admin@10.101.1.11's password: 
 
+Number of key(s) added: 1
+
+Now try logging into the machine, with:   "ssh 'admin@10.101.1.11'"
+and check to make sure that only the key(s) you wanted were added.
+
+
+adam@X1-Carbon:~/.ssh$ ssh-copy-id admin@10.101.1.12
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+admin@10.101.1.12's password: 
+
+Number of key(s) added: 1
+
+Now try logging into the machine, with:   "ssh 'admin@10.101.1.12'"
+and check to make sure that only the key(s) you wanted were added.
+```
+Assurez vous que la connexion SSH est fonctionnelle, sans avoir besoin de mot de passe.
+```
+adam@X1-Carbon:~/.ssh$ ssh admin@10.101.1.11
+Activate the web console with: systemctl enable --now cockpit.socket
+
+Last login: Mon Sep 27 02:15:53 2021
+[admin@node1 ~]$ 
+
+adam@X1-Carbon:~/.ssh$ ssh admin@10.101.1.12
+Activate the web console with: systemctl enable --now cockpit.socket
+
+Last login: Mon Sep 27 02:16:49 2021
+[admin@node2 ~]$ 
+```
 
 ## II. Partitionnement
 **Uniquement sur `node1.tp1.b2`.**
