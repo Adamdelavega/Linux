@@ -678,6 +678,7 @@ Une fois l'unité de service créée, il faut demander à *systemd* de relire le
 [adam@node1 system]$ sudo systemctl enable web
 Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc/systemd/system/web.service.
 ```
+```
 [adam@node1 ~]$ sudo systemctl status web
 ● web.service - Very simple web service
    Loaded: loaded (/etc/systemd/system/web.service; enabled; vendor preset:>
