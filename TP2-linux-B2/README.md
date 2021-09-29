@@ -32,18 +32,30 @@ Complete!
 
 ServerRoot "/etc/httpd"
 
-Listen 8888
+Listen 80
 
 Include conf.modules.d/*.conf
 
-User adam
-Group adam
+User apache
+Group apache
 
 
-ServerAdmin adam@tp2.linux
+ServerAdmin root@localhost
 
-ServerName web.tp2.linux:8888
-[...]
+
+<Directory />
+    AllowOverride none
+    Require all denied
+</Directory>
+
+
+DocumentRoot "/var/www/html"
+
+<Directory "/var/www">
+    AllowOverride None
+    Require all granted
+</Directory>
+
 ```
 **Démarrer le service Apache**
 
@@ -51,55 +63,55 @@ ServerName web.tp2.linux:8888
   - démarrez le
 ```
 [adam@web ~]$ sudo systemctl start httpd
+
 [adam@web ~]$ sudo systemctl status httpd
 ● httpd.service - The Apache HTTP Server
-   Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor pres>
-   Active: active (running) since Wed 2021-09-29 17:11:30 CEST; 7s ago
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor preset: disabled)
+   Active: active (running) since Wed 2021-09-29 17:44:43 CEST; 1min 0s ago
      Docs: man:httpd.service(8)
- Main PID: 26240 (httpd)
-   Status: "Started, listening on: port 8888"
+ Main PID: 27959 (httpd)
+   Status: "Running, listening on: port 80"
     Tasks: 213 (limit: 11378)
-   Memory: 25.1M
+   Memory: 24.3M
    CGroup: /system.slice/httpd.service
-           ├─26240 /usr/sbin/httpd -DFOREGROUND
-           ├─26243 /usr/sbin/httpd -DFOREGROUND
-           ├─26244 /usr/sbin/httpd -DFOREGROUND
-           ├─26245 /usr/sbin/httpd -DFOREGROUND
-           └─26246 /usr/sbin/httpd -DFOREGROUND
+           ├─27959 /usr/sbin/httpd -DFOREGROUND
+           ├─27960 /usr/sbin/httpd -DFOREGROUND
+           ├─27961 /usr/sbin/httpd -DFOREGROUND
+           ├─27962 /usr/sbin/httpd -DFOREGROUND
+           └─27963 /usr/sbin/httpd -DFOREGROUND
 
-Sep 29 17:11:30 web.tp2.linux systemd[1]: Starting The Apache HTTP Server...
-Sep 29 17:11:30 web.tp2.linux systemd[1]: Started The Apache HTTP Server.
-Sep 29 17:11:30 web.tp2.linux httpd[26240]: Server configured, listening on: po>
-lines 1-18/18 (END)
+Sep 29 17:44:43 web.tp2.linux systemd[1]: Starting The Apache HTTP Server...
+Sep 29 17:44:43 web.tp2.linux systemd[1]: Started The Apache HTTP Server.
+Sep 29 17:44:44 web.tp2.linux httpd[27959]: Server configured, listening on: port 80
 ```
   - faites en sorte qu'Apache démarre automatique au démarrage de la machine
 ```
 [adam@web ~]$ sudo systemctl enable httpd
 Created symlink /etc/systemd/system/multi-user.target.wants/httpd.service → /usr/lib/systemd/system/httpd.service.
+
 [adam@web ~]$ sudo systemctl status httpd
 ● httpd.service - The Apache HTTP Server
-   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor prese>
-   Active: active (running) since Wed 2021-09-29 17:11:30 CEST; 1min 12s ago
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Wed 2021-09-29 17:44:43 CEST; 2min 24s ago
      Docs: man:httpd.service(8)
- Main PID: 26240 (httpd)
-   Status: "Running, listening on: port 8888"
+ Main PID: 27959 (httpd)
+   Status: "Running, listening on: port 80"
     Tasks: 213 (limit: 11378)
-   Memory: 25.1M
+   Memory: 24.3M
    CGroup: /system.slice/httpd.service
-           ├─26240 /usr/sbin/httpd -DFOREGROUND
-           ├─26243 /usr/sbin/httpd -DFOREGROUND
-           ├─26244 /usr/sbin/httpd -DFOREGROUND
-           ├─26245 /usr/sbin/httpd -DFOREGROUND
-           └─26246 /usr/sbin/httpd -DFOREGROUND
+           ├─27959 /usr/sbin/httpd -DFOREGROUND
+           ├─27960 /usr/sbin/httpd -DFOREGROUND
+           ├─27961 /usr/sbin/httpd -DFOREGROUND
+           ├─27962 /usr/sbin/httpd -DFOREGROUND
+           └─27963 /usr/sbin/httpd -DFOREGROUND
 
-Sep 29 17:11:30 web.tp2.linux systemd[1]: Starting The Apache HTTP Server...
-Sep 29 17:11:30 web.tp2.linux systemd[1]: Started The Apache HTTP Server.
-Sep 29 17:11:30 web.tp2.linux httpd[26240]: Server configured, listening on: po>
-lines 1-18/18 (END)
+Sep 29 17:44:43 web.tp2.linux systemd[1]: Starting The Apache HTTP Server...
+Sep 29 17:44:43 web.tp2.linux systemd[1]: Started The Apache HTTP Server.
+Sep 29 17:44:44 web.tp2.linux httpd[27959]: Server configured, listening on: port 80
 ```
 - ouvrez le port firewall nécessaire
 ```
-[adam@web ~]$ sudo firewall-cmd --add-port=8888/tcp --permanent
+[adam@web ~]$ sudo firewall-cmd --add-port=80/tcp --permanent
 success
 ```
 - utiliser une commande `ss` pour savoir sur quel port tourne actuellement Apache
