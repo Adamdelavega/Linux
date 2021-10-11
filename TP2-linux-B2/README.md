@@ -1118,5 +1118,32 @@ MariaDB [nextcloud]> SHOW TABLES;
 
 MariaDB [nextcloud]> 
 ```
-**L'ors de la finalisation de l'installation 108 tables ont donc été créee**
+L'ors de la finalisation de l'installation 108 tables ont donc été créee
+
+**Pour voir les ports ouverts**
+```
+[adam@db ~]$ sudo ss -alntp
+[sudo] password for adam: 
+State                Recv-Q               Send-Q                             Local Address:Port                               Peer Address:Port               Process                                      
+LISTEN               0                    128                                      0.0.0.0:22                                      0.0.0.0:*                   users:(("sshd",pid=877,fd=5))               
+LISTEN               0                    128                                         [::]:22                                         [::]:*                   users:(("sshd",pid=877,fd=7))               
+LISTEN               0                    80                                             *:3306                                          *:*                   users:(("mysqld",pid=29399,fd=22))          
+[adam@db ~]$ 
+```
+```
+[adam@web ~]$ sudo ss -alntp
+[sudo] password for adam: 
+State    Recv-Q   Send-Q     Local Address:Port     Peer Address:Port   Process                                                                                                                            
+LISTEN   0        128              0.0.0.0:22            0.0.0.0:*       users:(("sshd",pid=875,fd=5))                                                                                                     
+LISTEN   0        128                    *:80                  *:*       users:(("httpd",pid=7079,fd=4),("httpd",pid=2401,fd=4),("httpd",pid=2400,fd=4),("httpd",pid=2399,fd=4),("httpd",pid=2396,fd=4))   
+LISTEN   0        128                 [::]:22               [::]:*       users:(("sshd",pid=875,fd=7))                                                                                                     
+LISTEN   0        80                     *:3306                *:*       users:(("mysqld",pid=14476,fd=22))                                                                                                
+[adam@web ~]$ 
+```
+
+| Machine         | IP            | Service                 | Port ouvert | IP autorisées |
+|-----------------|---------------|-------------------------|-------------|---------------|
+| `web.tp2.linux` | `10.102.1.11` | Serveur Web             | 22/80/3306  | 10.102.1.12   |
+| `db.tp2.linux`  | `10.102.1.12` | Serveur Base de Données | 22/3306     | 10.102.1.11   |
+
 
