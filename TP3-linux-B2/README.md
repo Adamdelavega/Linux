@@ -34,7 +34,7 @@ La solution doit être un projet libre et open-source (souvent, le code et la do
     - La machine peu communiquer sur le Web
     - La machine est administré via ssh
 
-# 2 Mise en place de l'infrastructure
+**2 Mise en place de l'infrastructure**
 
 - Pour chaques machines de ce projet la **Checklist** suivante à été vérifié.
     - La machine peu communiquer sur le réseau Local
@@ -286,7 +286,7 @@ router.tp2.linux
 [adam@router ~]$ 
 ```
 
-# 3 Configuration du serveur Rsyslog
+**3 Configuration du serveur Rsyslog**
 
 - Rsyslog est déjà installé sur rocky linux, on peut accéder au fichier de conf via /etc/rsyslog.conf
 - activer la collecte de logs udp et tcp
@@ -341,7 +341,7 @@ LISTEN              0                    25                                     
 [adam@syslog ~]$ 
 ```
 
-# 4 Configuration du client rsyslog
+**4 Configuration du client rsyslog**
 
 - Allez dans /etc/rsyslog.conf
 - En dessous j'ai fait en sorte d'enregistrer les logs et de les transmettre au mon serveur syslog.
@@ -399,7 +399,7 @@ Nov 12 00:55:39 server adam[3732]: Test de log
 ```
 Super ! Les logs sont bien transmis, nous allons donc paufiner la configuration de no client rsyslog en deployant un serveur web afin de le monitorer.
 
-# 5 Installation de Apache et gestion de logs sur la machine
+**5 Installation de Apache et gestion de logs**
 
 
 
