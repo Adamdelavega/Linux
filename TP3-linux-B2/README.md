@@ -286,10 +286,10 @@ router.tp2.linux
 [adam@router ~]$ 
 ```
 
-# 3 Configuration de Rsyslog
+# 3 Configuration du serveur Rsyslog
 
 - Rsyslog est déjà installé sur rocky linux, on peut accéder au fichier de conf via /etc/rsyslog.conf
-- activer la collecte de logs 
+- activer la collecte de logs udp et tcp
 ```
 [adam@syslog ~]$ cat /etc/rsyslog.conf
 [...]
@@ -297,6 +297,11 @@ router.tp2.linux
 # for parameters see http://www.rsyslog.com/doc/imudp.html
 module(load="imudp") # needs to be done just once
 input(type="imudp" port="514")
+
+# Provides TCP syslog reception
+# for parameters see http://www.rsyslog.com/doc/imtcp.html
+module(load="imtcp") # needs to be done just once
+input(type="imtcp" port="514")
 [...]
 ```
 - redémarer le service rsyslog
@@ -321,5 +326,81 @@ Nov 11 23:43:02 syslog.tp3.linux systemd[1]: Started System Logging Service.
 Nov 11 23:43:02 syslog.tp3.linux rsyslogd[1860]: imjournal: journal files changed, reloading...  [v8.1911.0-7.el8_4.2 try https://www.rsyslog.com/e/0 ]
 [adam@syslog ~]$ 
 ```
+- Activer le service
+```
+[adam@syslog ~]$ sudo systemctl enable rsyslog
+```
+- Rsyslog est prêt à recevoir des logs
+```
+[adam@syslog ~]$ sudo ss -alntp
+State               Recv-Q               Send-Q                             Local Address:Port                             Peer Address:Port              Process                                          
+LISTEN              0                    128                                      0.0.0.0:22                                    0.0.0.0:*                  users:(("sshd",pid=878,fd=5))                   
+LISTEN              0                    25                                       0.0.0.0:514                                   0.0.0.0:*                  users:(("rsyslogd",pid=2595,fd=6))              
+LISTEN              0                    128                                         [::]:22                                       [::]:*                  users:(("sshd",pid=878,fd=7))                   
+LISTEN              0                    25                                          [::]:514                                      [::]:*                  users:(("rsyslogd",pid=2595,fd=7))              
+[adam@syslog ~]$ 
+```
+
+# 4 Configuration du client rsyslog
+
+- Allez dans /etc/rsyslog.conf
+- En dessous j'ai fait en sorte d'enregistrer les logs et de les transmettre au mon serveur syslog.
+```
+#Target="remote_host" Port="XXX" Protocol="tcp")
+*.*                 @10.2.1.4:514
+*.*                @@10.2.1.4:514
+```
+(oui le serveur syslog est maintant en 10.2.1.4)
+- redémarer et activer le service rsyslog
+```
+[adam@server ~]$ sudo systemctl restart rsyslog
+[adam@server ~]$ sudo systemctl enable rsyslog
+[adam@server ~]$ sudo systemctl status rsyslog
+● rsyslog.service - System Logging Service
+   Loaded: loaded (/usr/lib/systemd/system/rsyslog.service; enabled; vendor preset: enabled)
+   Active: active (running) since Fri 2021-11-12 00:54:01 CET; 15s ago
+     Docs: man:rsyslogd(8)
+           https://www.rsyslog.com/doc/
+ Main PID: 3678 (rsyslogd)
+    Tasks: 4 (limit: 2725)
+   Memory: 1.3M
+   CGroup: /system.slice/rsyslog.service
+           └─3678 /usr/sbin/rsyslogd -n
+
+Nov 12 00:54:01 server.tp3.linux systemd[1]: rsyslog.service: Succeeded.
+Nov 12 00:54:01 server.tp3.linux systemd[1]: Stopped System Logging Service.
+Nov 12 00:54:01 server.tp3.linux systemd[1]: Starting System Logging Service...
+Nov 12 00:54:01 server.tp3.linux rsyslogd[3678]: [origin software="rsyslogd" swVersion="8.1911.0-7.el8_4.2" x-pid="3678" x-info="https://www.rsyslog.com"] start
+Nov 12 00:54:01 server.tp3.linux systemd[1]: Started System Logging Service.
+Nov 12 00:54:01 server.tp3.linux rsyslogd[3678]: imjournal: journal files changed, reloading...  [v8.1911.0-7.el8_4.2 try https://www.rsyslog.com/e/0 ]
+```
+**TEST**
+
+- Sur la machine client syslog je génère des logs pour tester la configuration
+```
+[adam@server ~]$ logger "Test de log"
+[adam@server ~]$ 
+```
+- Sur la machine serveur syslog je vérifie les logs
+```
+[adam@syslog ~]$ sudo !!
+sudo tail -f /var/log/messages
+[sudo] password for adam: 
+Nov 12 00:55:29 server systemd[1]: Started Network Manager Script Dispatcher Service.
+Nov 12 00:55:29 server NetworkManager[856]: <info>  [1636674929.3632] dhcp4 (enp0s9): state changed extended -> extended, address=10.2.1.2
+Nov 12 00:55:29 server dbus-daemon[820]: [system] Activating via systemd: service name='org.freedesktop.nm_dispatcher' unit='dbus-org.freedesktop.nm-dispatcher.service' requested by ':1.7' (uid=0 pid=856 comm="/usr/sbin/NetworkManager --no-daemon " label="system_u:system_r:NetworkManager_t:s0")
+Nov 12 00:55:29 server systemd[1]: Starting Network Manager Script Dispatcher Service...
+Nov 12 00:55:29 server dbus-daemon[820]: [system] Successfully activated service 'org.freedesktop.nm_dispatcher'
+Nov 12 00:55:29 server systemd[1]: Started Network Manager Script Dispatcher Service.
+Nov 12 00:55:39 server systemd[1]: NetworkManager-dispatcher.service: Succeeded.
+Nov 12 00:55:39 server systemd[1]: NetworkManager-dispatcher.service: Succeeded.
+Nov 12 00:55:39 server adam[3732]: Test de log
+Nov 12 00:55:39 server adam[3732]: Test de log
+```
+Super ! Les logs sont bien transmis, nous allons donc paufiner la configuration de no client rsyslog en deployant un serveur web afin de le monitorer.
+
+# 5 Installation de Apache et gestion de logs sur la machine
+
+
 
 
