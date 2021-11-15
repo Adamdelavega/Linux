@@ -473,50 +473,18 @@ Created symlink /etc/systemd/system/multi-user.target.wants/httpd.service → /u
    Active: active (running) since Sun 2021-11-14 13:47:27 CET; 9s ago
      Docs: man:httpd.service(8)
 ```
-- Pour utiliser rsyslog avec mon serveur web j'ai du créer et éditer le fichier suivant
-  ```
-   [adam@server ~]$ cat /etc/rsyslog.d/02-apache2.conf 
-   module(load="imfile" PollingInterval="10" statefile.directory="/var/spool/rsyslog")
-   input(type="imfile"
-         File="/var/log/httpd/error_log"
-         Tag="http_error"
-         Severity="error"
-         Facility="local6")
-   local6.error        @10.2.1.4:514
-   ```
-   - Pour vérifier que la configuration est bonne je tape cette commande, vu que la sortie est bonne je continue
-   ```
-      [adam@server ~]$ rsyslogd -N1 -f /etc/rsyslog.d/02-apache2.conf 
-   rsyslogd: version 8.1911.0-7.el8_4.2, config validation run (level 1), master config /etc/rsyslog.d/02-apache2.conf
-   rsyslogd: End of config validation run. Bye.
-   [adam@server ~]$ 
-   ```
-   - Pour que la configuartion fasse effet je dois redémarer rsyslog comme ceci
-   ```
-   [adam@server ~]$ sudo systemctl restart rsyslog.service 
-   [sudo] password for adam: 
-   [adam@server ~]$ 
-   ```
-   - Pour vérifier la réception des logs je peux faire un tcpdump comme ceci
-   ```
-   [adam@server ~]$ sudo tcpdump -i enp0s9 src host 10.2.1.2 and udp port 514 -nn -vv
-   dropped privs to tcpdump
-   tcpdump: listening on enp0s9, link-type EN10MB (Ethernet), capture size 262144 bytes
-   17:37:57.202229 IP (tos 0x0, ttl 64, id 31150, offset 0, flags [DF], proto UDP (17), length 193)
-      10.2.1.2.41804 > 10.2.1.4.514: [bad udp cksum 0x16c8 -> 0xbcc2!] SYSLOG, length: 165
-      Facility authpriv (10), Severity notice (5)
-      Msg: Nov 14 17:37:56 server sudo[35794]:    adam : TTY=pts/0 ; PWD=/home/adam ; USER=root ; COMMAND=/sbin/tcpdump -i enp0s9 src host 10.2.1.2 and udp port 514 -nn -vv
-      17:37:57.202632 IP (tos 0x0, ttl 64, id 31153, offset 0, flags [DF], proto UDP (17), length 100)
-    10.2.1.2.41804 > 10.2.1.4.514: [bad udp cksum 0x166b -> 0xf9d8!] SYSLOG, length: 72
-	Facility kernel (0), Severity info (6)
-	Msg: Nov 14 17:37:56 server kernel: device enp0s9 entered promiscuous mode
-	0x0000:  3c36 3e4e 6f76 2031 3420 3137 3a33 373a
-	0x0010:  3536 2073 6572 7665 7220 6b65 726e 656c
-	0x0020:  3a20 6465 7669 6365 2065 6e70 3073 3920
-	0x0030:  656e 7465 7265 6420 7072 6f6d 6973 6375
-	0x0040:  6f75 7320 6d6f 6465
-   [...]
-   ```
+- Nous pouvon voir que les logs sont bien transmise à la centralisation ci-dessous
+```
+Nov 14 17:49:50 server http_error [Sun Nov 14 17:49:50.465326 2021] [suexec:notice] [pid 35991:tid 140489571789120] AH01232: suEXEC mechanism enabled (wrapper: /usr/sbin/suexec)
+Nov 14 17:49:50 server http_error [Sun Nov 14 17:49:50.464584 2021] [core:notice] [pid 35991:tid 140489571789120] SELinux policy enabled; httpd running as context system_u:system_r:httpd_t:s0
+Nov 14 17:49:50 server httpd[35991]: Server configured, listening on: port 80
+```
+
+
+
+
+
+
 
 
 
