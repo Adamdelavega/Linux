@@ -341,7 +341,7 @@ LISTEN              0                    25                                     
 [adam@syslog ~]$ 
 ```
 
-**4 Configuration du client rsyslog**
+**4 Configuration du client rsyslog (server.tp3.linux)**
 
 - Allez dans /etc/rsyslog.conf
 - En dessous j'ai fait en sorte d'enregistrer les logs et de les transmettre au mon serveur syslog.
@@ -397,9 +397,133 @@ Nov 12 00:55:39 server systemd[1]: NetworkManager-dispatcher.service: Succeeded.
 Nov 12 00:55:39 server adam[3732]: Test de log
 Nov 12 00:55:39 server adam[3732]: Test de log
 ```
-Super ! Les logs sont bien transmis, nous allons donc paufiner la configuration de no client rsyslog en deployant un serveur web afin de le monitorer.
 
-**5 Installation de Apache et gestion de logs**
+**4.2 Configuration du client rsyslog (router.tp3.linux)**
+
+```
+[adam@router ~]$ sudo vim /etc/rsyslog.conf 
+[sudo] password for adam: 
+[...]
+# Provides UDP syslog reception
+# for parameters see http://www.rsyslog.com/doc/imudp.html
+module(load="imudp") # needs to be done just once
+input(type="imudp" port="514")
+
+# Provides TCP syslog reception
+# for parameters see http://www.rsyslog.com/doc/imtcp.html
+module(load="imtcp") # needs to be done just once
+input(type="imtcp" port="514")
+[...]
+#Target="remote_host" Port="XXX" Protocol="tcp")
+*.*                             @10.2.1.4:514
+*.*                             @@10.2.1.4:514
+```
+```
+[adam@router ~]$ sudo systemctl restart rsyslog
+[adam@router ~]$ sudo systemctl status rsyslog
+● rsyslog.service - System Logging Service
+   Loaded: loaded (/usr/lib/systemd/system/rsyslog.service; enabled; vendor preset: enabled)
+   Active: active (running) since Sun 2021-11-14 13:17:26 CET; 2s ago
+     Docs: man:rsyslogd(8)
+           https://www.rsyslog.com/doc/
+ Main PID: 1478 (rsyslogd)
+    Tasks: 9 (limit: 2725)
+   Memory: 1.6M
+   CGroup: /system.slice/rsyslog.service
+           └─1478 /usr/sbin/rsyslogd -n
+
+[...]
+```
+**TEST2**
+
+```
+[adam@router ~]$ logger "Test2 génération de logs"
+[adam@router ~]$ 
+```
+```
+[adam@syslog ~]$ sudo tail -f /var/log/messages 
+Nov 14 13:35:37 server dhclient[1744]: bound to 192.168.60.3 -- renewal in 286 seconds.
+Nov 14 13:35:43 syslog systemd[1]: NetworkManager-dispatcher.service: Succeeded.
+Nov 14 13:35:44 router adam[1624]: Test2
+Nov 14 13:35:44 router adam[1624]: Test2
+```
+Super ! Les logs sont bien transmises, nous voyen bien que les log proviennes du router, de syslog et egalement de server.
+Nous allons donc paufiner la configuration de nos client rsyslog en deployant un serveur web afin de le monitorer.
+
+**5 Installation de Apache et gestion de logs pour serveur web**
+
+- Installation du paquet httpd.
+```
+[adam@server ~]$ sudo dnf install -y httpd
+[...]
+Installed:
+  apr-1.6.3-11.el8.1.x86_64                                          apr-util-1.6.1-6.el8.1.x86_64                                 apr-util-bdb-1.6.1-6.el8.1.x86_64                                      
+  apr-util-openssl-1.6.1-6.el8.1.x86_64                              httpd-2.4.37-39.module+el8.4.0+655+f2bfd6ee.1.x86_64          httpd-filesystem-2.4.37-39.module+el8.4.0+655+f2bfd6ee.1.noarch        
+  httpd-tools-2.4.37-39.module+el8.4.0+655+f2bfd6ee.1.x86_64         mod_http2-1.15.7-3.module+el8.4.0+553+7a69454b.x86_64         rocky-logos-httpd-84.5-8.el8.noarch                                    
+
+Complete!
+```
+- Faire en sorte que le service soit démaré aux prochains démarages et lancez-le.
+```
+[adam@server ~]$ sudo systemctl enable httpd --now
+Created symlink /etc/systemd/system/multi-user.target.wants/httpd.service → /usr/lib/systemd/system/httpd.service.
+[adam@server ~]$ sudo systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Sun 2021-11-14 13:47:27 CET; 9s ago
+     Docs: man:httpd.service(8)
+```
+- Pour utiliser rsyslog avec mon serveur web j'ai du créer et éditer le fichier suivant
+  ```
+   [adam@server ~]$ cat /etc/rsyslog.d/02-apache2.conf 
+   module(load="imfile" PollingInterval="10" statefile.directory="/var/spool/rsyslog")
+   input(type="imfile"
+         File="/var/log/httpd/error_log"
+         Tag="http_error"
+         Severity="error"
+         Facility="local6")
+   local6.error        @10.2.1.4:514
+   ```
+   - Pour vérifier que la configuration est bonne je tape cette commande, vu que la sortie est bonne je continue
+   ```
+      [adam@server ~]$ rsyslogd -N1 -f /etc/rsyslog.d/02-apache2.conf 
+   rsyslogd: version 8.1911.0-7.el8_4.2, config validation run (level 1), master config /etc/rsyslog.d/02-apache2.conf
+   rsyslogd: End of config validation run. Bye.
+   [adam@server ~]$ 
+   ```
+   - Pour que la configuartion fasse effet je dois redémarer rsyslog comme ceci
+   ```
+   [adam@server ~]$ sudo systemctl restart rsyslog.service 
+   [sudo] password for adam: 
+   [adam@server ~]$ 
+   ```
+   - Pour vérifier la réception des logs je peux faire un tcpdump comme ceci
+   ```
+   [adam@server ~]$ sudo tcpdump -i enp0s9 src host 10.2.1.2 and udp port 514 -nn -vv
+   dropped privs to tcpdump
+   tcpdump: listening on enp0s9, link-type EN10MB (Ethernet), capture size 262144 bytes
+   17:37:57.202229 IP (tos 0x0, ttl 64, id 31150, offset 0, flags [DF], proto UDP (17), length 193)
+      10.2.1.2.41804 > 10.2.1.4.514: [bad udp cksum 0x16c8 -> 0xbcc2!] SYSLOG, length: 165
+      Facility authpriv (10), Severity notice (5)
+      Msg: Nov 14 17:37:56 server sudo[35794]:    adam : TTY=pts/0 ; PWD=/home/adam ; USER=root ; COMMAND=/sbin/tcpdump -i enp0s9 src host 10.2.1.2 and udp port 514 -nn -vv
+      17:37:57.202632 IP (tos 0x0, ttl 64, id 31153, offset 0, flags [DF], proto UDP (17), length 100)
+    10.2.1.2.41804 > 10.2.1.4.514: [bad udp cksum 0x166b -> 0xf9d8!] SYSLOG, length: 72
+	Facility kernel (0), Severity info (6)
+	Msg: Nov 14 17:37:56 server kernel: device enp0s9 entered promiscuous mode
+	0x0000:  3c36 3e4e 6f76 2031 3420 3137 3a33 373a
+	0x0010:  3536 2073 6572 7665 7220 6b65 726e 656c
+	0x0020:  3a20 6465 7669 6365 2065 6e70 3073 3920
+	0x0030:  656e 7465 7265 6420 7072 6f6d 6973 6375
+	0x0040:  6f75 7320 6d6f 6465
+   [...]
+   ```
+
+
+
+
+
+
+
 
 
 
