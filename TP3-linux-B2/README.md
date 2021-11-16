@@ -709,25 +709,3 @@ Nous voyons bien que nous avon eu l'alerte dans les logs pour le down et pour l'
 
 Nous avons dans ce TP3 une solution fonctionnelle, les bonne pratique qui sont réspectées, 
 une automatiqation de notre solution pour l'envoi de log, et du maintien en condition opérationnelle.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Activation of udp service
-echo 'module(load="imudp")' >> /etc/rsyslog.conf
-echo 'input(type="imudp" port="514")' >> /etc/rsyslog.conf
-
