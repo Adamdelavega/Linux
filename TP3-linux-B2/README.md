@@ -1,40 +1,7 @@
 # TP3 : Your own shiet
-# Intro
+## TP
 
-**Dans ce TP, vous allez installer une solution de votre choix.** Pas la développer, mais bien installer et configurer un truc existant.
-
-Pensez large :
-
-- hébergement de fichiers
-- streaming audio/vidéo
-- webradio
-- héberger votre propre dépôt git
-- serveur de jeu
-- serveur VPN
-- etc.
-
-La solution doit être un projet libre et open-source (souvent, le code et la doc seront accessibles sur GitHub).
-
-# 1 Le projet
-
-- Mon projet pour ce TP3 est de découvrir et d'installer une solution de monitoring orienté sécurité et donc de me mettre dans la peau d'un analiste SOC.
-- La totalité des outils qui sont utilisés dans ce projet sont libres et open source. Pour rester dans le même environement que mes anciens TP j'ai décidé de mener mon projet sur le system d'exploitation Rocky_Linux_8.4.
-- Voici une liste des outils que je vais utiliser :
-    - Stack ELK (Elasticsearch, Logstash, Kibana, Beats)
-    - Rsyslog
-    - Matrice ATT&CK
-    - nginx
-- Pour avoir un projet complet je vais déployer une infrastructure petite mais qui comportes touts les équipements de bases d'un réseau d'entreprise.
-    - Une VM router.tp3.linux qui va faire du routage static, de la résolution de nom, et de l'allocation d'adresses IP.
-    - Une VM server.tp3.linux qui va herberger un serveur web standard.
-    - Une VM syslog.tp3.linux qui va recevoir les logs et les centraliser.
-- Pour chaques machines de ce projet la **Checklist** suivante à été vérifié.
-    - La machine peu communiquer sur le réseau Local
-    - La machine peu communiquer sur le réseau Internet
-    - La machine peu communiquer sur le Web
-    - La machine est administré via ssh
-
-**2 Mise en place de l'infrastructure**
+**Mise en place de l'infrastructure**
 
 - Pour chaques machines de ce projet la **Checklist** suivante à été vérifié.
     - La machine peu communiquer sur le réseau Local
@@ -286,7 +253,7 @@ router.tp2.linux
 [adam@router ~]$ 
 ```
 
-**3 Configuration du serveur Rsyslog**
+**Configuration du serveur Rsyslog**
 
 - Rsyslog est déjà installé sur rocky linux, on peut accéder au fichier de conf via /etc/rsyslog.conf
 - activer la collecte de logs udp et tcp
@@ -341,7 +308,7 @@ LISTEN              0                    25                                     
 [adam@syslog ~]$ 
 ```
 
-**4 Configuration du client rsyslog (server.tp3.linux)**
+**Configuration du client rsyslog (server.tp3.linux)**
 
 - Allez dans /etc/rsyslog.conf
 - En dessous j'ai fait en sorte d'enregistrer les logs et de les transmettre au mon serveur syslog.
@@ -398,7 +365,7 @@ Nov 12 00:55:39 server adam[3732]: Test de log
 Nov 12 00:55:39 server adam[3732]: Test de log
 ```
 
-**4.2 Configuration du client rsyslog (router.tp3.linux)**
+**Configuration du client rsyslog (router.tp3.linux)**
 
 ```
 [adam@router ~]$ sudo vim /etc/rsyslog.conf 
@@ -450,7 +417,7 @@ Nov 14 13:35:44 router adam[1624]: Test2
 Super ! Les logs sont bien transmises, nous voyen bien que les log proviennes du router, de syslog et egalement de server.
 Nous allons donc paufiner la configuration de nos client rsyslog en deployant un serveur web afin de le monitorer.
 
-**5 Installation de Apache et gestion de logs pour serveur web**
+**Installation de Apache et gestion de logs pour serveur web**
 
 - Installation du paquet httpd.
 ```
@@ -480,6 +447,268 @@ Nov 14 17:49:50 server http_error [Sun Nov 14 17:49:50.464584 2021] [core:notice
 Nov 14 17:49:50 server httpd[35991]: Server configured, listening on: port 80
 ```
 
+**Backup**
+ 
+- Backup des log rsyslog du serveur de centralisation, en prenant en compte que le fichier peut être conséquent
+```
+[adam@syslog ~]$ cat backup.sh 
+#!/bin/bash
+
+############################
+#                          #
+#                          #
+# BACKUP TO LOG RSYSLOG    #
+#                          #
+############################
+
+# src path
+backup_files="/var/log/messages"
+
+# dest_path
+dest="/home/adam/backup/"
+
+# Create archive filename
+day=$(date +%A)
+hostname=$(hostname -s)
+archive_file="$hostname-$day.tgz"
+
+# message of backup
+echo "Backing up $backup_files to $dest/$archive_file"
+date
+echo
+
+# Backup the files with tar
+tar czf $dest/$archive_file $backup_files
+
+# Print end status message.
+echo
+echo "Backup finished"
+date
+[adam@syslog ~]$ 
+```
+- Allocation des bon droit
+```
+[adam@syslog ~]$ chmod +x backup.sh 
+[adam@syslog ~]$ 
+```
+- avant la backup
+```
+[adam@syslog ~]$ pwd
+/home/adam
+[adam@syslog ~]$ ls backup
+[adam@syslog ~]$ 
+```
+- Execution de la backup
+```
+[adam@syslog ~]$ sudo ./backup.sh
+Backing up /var/log/messages to /home/adam/backup//syslog-Sunday.tgz
+Sun Nov 14 19:39:42 CET 2021
+
+tar: Removing leading `/' from member names
+
+Backup finished
+Sun Nov 14 19:39:42 CET 2021
+[adam@syslog ~]$ 
+```   
+- Apres la backup
+```
+[adam@syslog ~]$ ls backup
+syslog-Sunday.tgz
+[adam@syslog ~]$ tar -xzvf backup/syslog-Sunday.tgz 
+var/log/messages
+[adam@syslog ~]$ cat backup/var/log/messages 
+[...]
+Nov 14 19:38:06 router dhcpd[1103]: DHCPACK on 10.2.1.4 to 08:00:27:f4:c7:3d (syslog) via enp0s9
+Nov 14 19:39:03 syslog systemd[1]: NetworkManager-dispatcher.service: Succeeded.
+```
+- Petit plus, une vrai backup se lance automatiquement, par exemple avec crontab
+```
+[adam@syslog ~]$ cat /etc/crontab 
+SHELL=/bin/bash
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+
+# For details see man 4 crontabs
+
+# Example of job definition:
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+# |  |  |  |  |
+# *  *  *  *  * user-name  command to be executed
+0 *  /2 *  *  *            /home/adam/backup/./backup.sh
+[adam@syslog ~]$ 
+```
+
+**Automatisation de la solution**
+
+- Pour le test je supprime rsyslog
+```
+[adam@server ~]$ sudo dnf -y remove rsyslog
+[sudo] password for adam: 
+Failed to set locale, defaulting to C.UTF-8
+Dependencies resolved.
+===========================================================================================================================================================================================================
+ Package                                         Architecture                               Version                                                   Repository                                      Size
+===========================================================================================================================================================================================================
+Removing:
+ rsyslog                                         x86_64                                     8.1911.0-7.el8_4.2                                        @appstream                                     2.3 M
+Removing unused dependencies:
+[...]
+Removed:
+  libestr-0.1.10-1.el8.x86_64                                     libfastjson-0.99.8-2.el8.x86_64                                     rsyslog-8.1911.0-7.el8_4.2.x86_64                                    
+
+Complete!
+```
+- Je donne les drois d'execution à mon script et fait en sorte que seul un utilisateur ayant des droit root puisse le manipuler
+```
+[adam@server ~]$ sudo chmod 700 script.sh 
+[adam@server ~]$ ls -l
+total 4
+-rwx------. 1 root root 678 Nov 16 00:53 script.sh
+[adam@server ~]$ 
+```
+- Execution du script
+```
+[adam@server ~]$ sudo ./script.sh
+Failed to set locale, defaulting to C.UTF-8
+Last metadata expiration check: 0:59:31 ago on Tue Nov 16 00:46:07 2021.
+Dependencies resolved.
+===========================================================================================================================================================================================================
+ Package                                           Architecture                                 Version                                              Repository                                       Size
+===========================================================================================================================================================================================================
+Installing:
+ rsyslog                                           x86_64                                       8.2102.0-5.el8                                       appstream                                       751 k
+Installing dependencies:
+ libestr                                           x86_64                                       0.1.10-1.el8                                         appstream                                        26 k
+ libfastjson                                       x86_64                                       0.99.9-1.el8                                         appstream                                        37 k
+
+Transaction Summary
+===========================================================================================================================================================================================================
+Install  3 Packages
+
+Total download size: 814 k
+Installed size: 2.5 M
+Downloading Packages:
+(1/3): libestr-0.1.10-1.el8.x86_64.rpm                                                                                                                                      46 kB/s |  26 kB     00:00    
+(2/3): libfastjson-0.99.9-1.el8.x86_64.rpm                                                                                                                                  64 kB/s |  37 kB     00:00    
+(3/3): rsyslog-8.2102.0-5.el8.x86_64.rpm                                                                                                                                   744 kB/s | 751 kB     00:01    
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                                                                                                      578 kB/s | 814 kB     00:01     
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                                                                                                                                                   1/1 
+  Installing       : libfastjson-0.99.9-1.el8.x86_64                                                                                                                                                   1/3 
+  Running scriptlet: libfastjson-0.99.9-1.el8.x86_64                                                                                                                                                   1/3 
+  Installing       : libestr-0.1.10-1.el8.x86_64                                                                                                                                                       2/3 
+  Running scriptlet: libestr-0.1.10-1.el8.x86_64                                                                                                                                                       2/3 
+  Installing       : rsyslog-8.2102.0-5.el8.x86_64                                                                                                                                                     3/3 
+  Running scriptlet: rsyslog-8.2102.0-5.el8.x86_64                                                                                                                                                     3/3 
+  Verifying        : libestr-0.1.10-1.el8.x86_64                                                                                                                                                       1/3 
+  Verifying        : libfastjson-0.99.9-1.el8.x86_64                                                                                                                                                   2/3 
+  Verifying        : rsyslog-8.2102.0-5.el8.x86_64                                                                                                                                                     3/3 
+
+Installed:
+  libestr-0.1.10-1.el8.x86_64                                      libfastjson-0.99.9-1.el8.x86_64                                      rsyslog-8.2102.0-5.el8.x86_64                                     
+
+Complete!
+Please enter the IP of server
+10.2.1.4
+Warning: ALREADY_ENABLED: '514:udp' already in 'public'
+success
+Warning: ALREADY_ENABLED: '514:udp' already in 'public'
+success
+script complete !
+```
+**Verification**
+
+- Pour commencer vérifion si rsyslog est bien lancé
+```
+[adam@server ~]$ sudo systemctl status rsyslog.service 
+● rsyslog.service - System Logging Service
+   Loaded: loaded (/usr/lib/systemd/system/rsyslog.service; enabled; vendor preset: enabled)
+   Active: active (running) since Tue 2021-11-16 01:53:29 CET; 28s ago
+     Docs: man:rsyslogd(8)
+           https://www.rsyslog.com/doc/
+ Main PID: 3959 (rsyslogd)
+    Tasks: 4 (limit: 2725)
+   Memory: 1.3M
+   CGroup: /system.slice/rsyslog.service
+           └─3959 /usr/sbin/rsyslogd -n
+
+Nov 16 01:53:29 server.tp3.linux systemd[1]: Starting System Logging Service...
+Nov 16 01:53:29 server.tp3.linux rsyslogd[3959]: [origin software="rsyslogd" swVersion="8.2102.0-5.el8" x-pid="3959" x-info="https://www.rsyslog.com"] start
+Nov 16 01:53:29 server.tp3.linux systemd[1]: Started System Logging Service.
+Nov 16 01:53:29 server.tp3.linux rsyslogd[3959]: imjournal: journal files changed, reloading...  [v8.2102.0-5.el8 try https://www.rsyslog.com/e/0 ]
+[adam@server ~]$ 
+```
+- Ensuite vérifion si les log sont bien envoyé au serveur de centralisation
+   - Test_1
+   ```
+   [adam@server ~]$ logger "Test1"
+   [adam@server ~]$ logger "Test1"
+   [adam@syslog ~]$ sudo tail -f /var/log/messages
+   [sudo] password for adam: 
+   Nov 16 01:56:28 syslog systemd[1]: Started Network Manager Script Dispatcher Service.
+   Nov 16 01:56:28 router dhcpd[1098]: Wrote 2 leases to leases file.
+   Nov 16 01:56:28 router dhcpd[1098]: DHCPREQUEST for 10.2.1.4 from 08:00:27:f4:c7:3d (syslog) via enp0s9
+   Nov 16 01:56:28 router dhcpd[1098]: DHCPACK on 10.2.1.4 to 08:00:27:f4:c7:3d (syslog) via enp0s9
+   Nov 16 01:56:28 router dhcpd[1098]: Wrote 2 leases to leases file.
+   Nov 16 01:56:28 router dhcpd[1098]: DHCPREQUEST for 10.2.1.4 from 08:00:27:f4:c7:3d (syslog) via enp0s9
+   Nov 16 01:56:28 router dhcpd[1098]: DHCPACK on 10.2.1.4 to 08:00:27:f4:c7:3d (syslog) via enp0s9
+   Nov 16 01:56:38 syslog systemd[1]: NetworkManager-dispatcher.service: Succeeded.
+   Nov 16 01:57:11 server adam[4038]: Test1
+   Nov 16 01:57:24 server adam[4041]: Test1
+   ```
+   - Test2
+   ```
+   [adam@server ~]$ sudo nmcli con down enp0s9
+   [sudo] password for adam: 
+   Connection 'enp0s9' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2)
+   [adam@server ~]$ 
+   Nov 16 02:04:09 server NetworkManager[857]: <info>  [1637024649.8708] device (enp0s9): state change: deactivating -> disconnected (reason 'user-requested', sys-iface-state: 'managed')
+   Nov 16 02:04:09 server NetworkManager[857]: <info>  [1637024649.8760] dhcp4 (enp0s9): canceled DHCP transaction
+   Nov 16 02:04:09 server NetworkManager[857]: <info>  [1637024649.8760] dhcp4 (enp0s9): state changed extended -> done
+
+   [adam@server ~]$ sudo nmcli con up enp0s9
+   [sudo] password for adam: 
+   Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/3)
+   [adam@server ~]$ 
+
+   Nov 16 02:18:02 server NetworkManager[857]: <info>  [1637025482.4846] device (enp0s9): Activation: successful, device activated.
+   Nov 16 02:18:02 server systemd[1]: iscsi.service: Unit cannot be reloaded because it is inactive.
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPDISCOVER from 08:00:27:61:81:82 (server) via enp0s9
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPOFFER on 10.2.1.2 to 08:00:27:61:81:82 (server) via enp0s9
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPREQUEST for 10.2.1.2 (10.2.1.254) from 08:00:27:61:81:82 (server) via enp0s9
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPACK on 10.2.1.2 to 08:00:27:61:81:82 (server) via enp0s9
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPDISCOVER from 08:00:27:61:81:82 (server) via enp0s9
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPOFFER on 10.2.1.2 to 08:00:27:61:81:82 (server) via enp0s9
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPREQUEST for 10.2.1.2 (10.2.1.254) from 08:00:27:61:81:82 (server) via enp0s9
+   Nov 16 02:18:02 router dhcpd[1098]: DHCPACK on 10.2.1.2 to 08:00:27:61:81:82 (server) via enp0s9
+
+
+Nous voyons bien que nous avon eu l'alerte dans les logs pour le down et pour l'échange DORA lors de l'activation de l'interface réseau
+
+### Conclusion
+
+| Nom de machine|         Adresse IP          |           Port(s)           |
+|---------------|-----------------------------|-----------------------------|
+| `server`      | `10.1.1.2` / `10.2.1.2`     | `22/tcp` `80/tcp` `514/udp` | 
+| `router`      | `10.1.1.254` / `10.2.1.254` | `22/tcp` `514/udp` `dhcp`   |
+| `syslog`      | `10.1.1.3` / `10.2.1.4`     | `22/tcp` `514/udp`          |
+
+| Nom du réseau | Adresse du réseau | Masque            |
+|---------------|-------------------|-------------------|
+| `managment`   | `10.1.1.0/24`     | `255.255.255.0`   |
+| `client`      | `10.2.1.0/24`     | `255.255.255.0`   |
+
+Nous avons dans ce TP3 une solution fonctionnelle, les bonne pratique qui sont réspectées, 
+une automatiqation de notre solution pour l'envoi de log, et du maintien en condition opérationnelle.
 
 
 
@@ -495,4 +724,10 @@ Nov 14 17:49:50 server httpd[35991]: Server configured, listening on: port 80
 
 
 
+
+
+
+# Activation of udp service
+echo 'module(load="imudp")' >> /etc/rsyslog.conf
+echo 'input(type="imudp" port="514")' >> /etc/rsyslog.conf
 
