@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# this script do the installation of rsyslog for clients
+
 # #################################
 #                                 #
 #       Adam d Autheville         #
