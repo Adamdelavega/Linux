@@ -454,6 +454,8 @@ Nov 14 17:49:50 server httpd[35991]: Server configured, listening on: port 80
 [adam@syslog ~]$ cat backup.sh 
 #!/bin/bash
 
+# This script do a backup
+
 ############################
 #                          #
 #                          #
