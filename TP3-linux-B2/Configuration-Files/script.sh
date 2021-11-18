@@ -6,7 +6,7 @@
 #                                 #
 #       Adam d Autheville         #
 #  B2 Informatique Ynov Bordeaux  #
-#                                 #
+#      18/11/2021                 #
 # #################################
 
 # Instalation of Rsyslog

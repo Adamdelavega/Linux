@@ -455,6 +455,7 @@ Nov 14 17:49:50 server httpd[35991]: Server configured, listening on: port 80
 #!/bin/bash
 
 # This script do a backup
+# Adam 18/11/2021
 
 ############################
 #                          #
